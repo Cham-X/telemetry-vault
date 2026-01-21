@@ -1,6 +1,6 @@
 import type { TelemetryEvent, EventType } from '../types/telemetry';
 
-// const EVENT_TYPES: EventType[] = ['request', 'error', 'warning', 'metric', 'trace'];
+const EVENT_TYPES: EventType[] = ['request', 'error', 'warning', 'metric', 'trace'];
 
 const SOURCES = [
     'api-gateway',
@@ -23,13 +23,13 @@ const SOURCES = [
 export function generateValue(eventType: EventType): number {
     switch (eventType) {
         case 'request':
-            // Latency in ms: mostly 10-200ms, some outliers
+            // Latency in ms: mostly 10-200ms, some outliers up to 1000ms
             return Math.random() < 0.9
                 ? 10 + Math.random() * 190
                 : 200 + Math.random() * 800;
 
         case 'error':
-            // Error codes: 400-599
+            // HTTP error codes: 400-599
             return 400 + Math.floor(Math.random() * 200);
 
         case 'warning':
@@ -41,7 +41,7 @@ export function generateValue(eventType: EventType): number {
             return Math.random() * 100;
 
         case 'trace':
-            // Trace duration in ms
+            // Trace duration in ms: 5-505ms
             return 5 + Math.random() * 500;
 
         default:
@@ -50,33 +50,36 @@ export function generateValue(eventType: EventType): number {
 }
 
 /**
- * Generates a weighted random event type (more requests, fewer errors)
+ * Generates a weighted random event type
+ * Distribution: 50% requests, 20% metrics, 15% traces, 10% warnings, 5% errors
  */
 export function getRandomEventType(): EventType {
     const rand = Math.random();
 
-    if (rand < 0.5) return 'request';      // 50% requests
-    if (rand < 0.7) return 'metric';       // 20% metrics
-    if (rand < 0.85) return 'trace';       // 15% traces
-    if (rand < 0.95) return 'warning';     // 10% warnings
-    return 'error';                         // 5% errors
+    if (rand < 0.5) return 'request';      // 50%
+    if (rand < 0.7) return 'metric';       // 20%
+    if (rand < 0.85) return 'trace';       // 15%
+    if (rand < 0.95) return 'warning';     // 10%
+    return 'error';                         // 5%
 }
 
 /**
  * Generates synthetic telemetry data with realistic patterns
+ * 
+ * @param count - Number of events to generate (default: 50000)
+ * @returns Array of telemetry events sorted by timestamp
  */
 export function generateTelemetryData(count: number = 50000): TelemetryEvent[] {
     const events: TelemetryEvent[] = [];
     const now = Date.now();
-    const sevenDaysAgo = now - (7 * 24 * 60 * 60 * 1000); // 7 days back
+    const sevenDaysAgo = now - (7 * 24 * 60 * 60 * 1000);
 
     console.time('Data Generation');
 
     for (let i = 0; i < count; i++) {
-        // Generate timestamp: distribute across last 7 days
-        // Add some clustering around "peak hours" for realism
+        // Generate timestamp with daily patterns (more events during "peak hours")
         const randomDay = Math.random();
-        const hourBias = Math.sin(randomDay * Math.PI * 2) * 0.3 + 0.5; // Simulate daily patterns
+        const hourBias = Math.sin(randomDay * Math.PI * 2) * 0.3 + 0.5;
         const timestamp = sevenDaysAgo + (Math.random() * hourBias * (now - sevenDaysAgo));
 
         const eventType = getRandomEventType();
@@ -84,7 +87,7 @@ export function generateTelemetryData(count: number = 50000): TelemetryEvent[] {
         const value = generateValue(eventType);
 
         events.push({
-            id: `evt_${i}_${Date.now()}`,
+            id: `evt_${i}_${timestamp}`,
             timestamp: Math.floor(timestamp),
             value: Math.round(value * 100) / 100, // Round to 2 decimals
             eventType,
@@ -92,7 +95,7 @@ export function generateTelemetryData(count: number = 50000): TelemetryEvent[] {
         });
     }
 
-    // Sort by timestamp for better performance in time-based queries
+    // Sort by timestamp for better query performance
     events.sort((a, b) => a.timestamp - b.timestamp);
 
     console.timeEnd('Data Generation');
@@ -110,10 +113,12 @@ export function getUniqueSources(events: TelemetryEvent[]): string[] {
 }
 
 /**
- * Get time range from dataset
+ * Get time range boundaries from dataset
  */
 export function getTimeRange(events: TelemetryEvent[]): { min: number; max: number } {
-    if (events.length === 0) return { min: Date.now(), max: Date.now() };
+    if (events.length === 0) {
+        return { min: Date.now(), max: Date.now() };
+    }
 
     return {
         min: events[0].timestamp,
@@ -121,4 +126,16 @@ export function getTimeRange(events: TelemetryEvent[]): { min: number; max: numb
     };
 }
 
+/**
+ * Get all available event types
+ */
+export function getEventTypes(): EventType[] {
+    return [...EVENT_TYPES];
+}
 
+/**
+ * Get all available sources
+ */
+export function getSources(): string[] {
+    return [...SOURCES];
+}
