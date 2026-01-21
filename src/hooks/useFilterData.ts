@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type {
     TelemetryEvent,
     FilterCriteria,
@@ -7,6 +7,8 @@ import type {
     WorkerMessage,
     WorkerResponse
 } from '../types/telemetry';
+import { filterEventsOptimized } from '../utils/dataProcessor';
+import { calculateAggregation } from '../utils/aggregation';
 
 interface UseFilteredDataProps {
     events: TelemetryEvent[];
@@ -43,7 +45,6 @@ export function useFilteredData({
     const [isProcessing, setIsProcessing] = useState(false);
     const [worker, setWorker] = useState<Worker | null>(null);
 
-    // Initialize Web Worker
     useEffect(() => {
         if (!useWorker) return;
 
@@ -59,14 +60,12 @@ export function useFilteredData({
         };
     }, [useWorker]);
 
-    // Process data (with or without worker)
     useEffect(() => {
         if (events.length === 0) return;
 
         setIsProcessing(true);
 
         if (useWorker && worker) {
-            // Use Web Worker
             const message: WorkerMessage = {
                 type: 'FILTER_AND_AGGREGATE',
                 payload: {
@@ -93,7 +92,6 @@ export function useFilteredData({
                 worker.removeEventListener('message', handleMessage);
             };
         } else {
-            // Process on main thread (fallback)
             import('../utils/dataProcessor').then(({ filterEventsOptimized }) => {
                 import('../utils/aggregation').then(({ calculateAggregation }) => {
                     const filtered = filterEventsOptimized(events, filters);
@@ -114,19 +112,13 @@ export function useFilteredData({
     };
 }
 
-/**
- * Simpler hook without Web Worker for smaller datasets
- */
+
 export function useFilteredDataSync({
     events,
     filters,
     aggregationType,
 }: UseFilteredDataProps): UseFilteredDataReturn {
     const { filteredEvents, aggregatedResult } = useMemo(() => {
-        // Import synchronously (will be tree-shaken in production)
-        const { filterEventsOptimized } = require('../utils/dataProcessor');
-        const { calculateAggregation } = require('../utils/aggregation');
-
         const filtered = filterEventsOptimized(events, filters);
         const aggregated = calculateAggregation(filtered, aggregationType);
 

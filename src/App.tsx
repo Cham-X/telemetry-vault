@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState,  useMemo } from 'react';
 import { useTelemetryData } from './hooks/useTelemetryData';
 import { FilterControls } from './component/FilterControl';
 import { DataTable } from './component/DataTable';
@@ -19,8 +19,6 @@ function App() {
   } = useTelemetryData(100000);
 
   // Filter states
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
   const [selectedEventTypes, setSelectedEventTypes] = useState<EventType[]>([]);
   const [selectedSources, setSelectedSources] = useState<string[]>([]);
   const [aggregationType, setAggregationType] = useState<AggregationType>('count');
@@ -28,14 +26,25 @@ function App() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(50);
 
-  useEffect(() => {
-    if (!isLoading && events.length > 0) {
-      const minDate = new Date(timeRange.min);
-      const maxDate = new Date(timeRange.max);
-      setStartDate(minDate.toISOString().split('T')[0]);
-      setEndDate(maxDate.toISOString().split('T')[0]);
-    }
-  }, [isLoading, events.length, timeRange]);
+const defaultStartDate = useMemo(
+  () => new Date(timeRange.min).toISOString().split('T')[0],
+  [timeRange.min]
+);
+
+const defaultEndDate = useMemo(
+  () => new Date(timeRange.max).toISOString().split('T')[0],
+  [timeRange.max]
+);
+
+  
+  const [startDate, setStartDate] = useState<string | null>(null);
+const [endDate, setEndDate] = useState<string | null>(null);
+
+const effectiveStartDate = startDate ?? defaultStartDate;
+const effectiveEndDate = endDate ?? defaultEndDate;
+
+
+
 
   const filters: FilterCriteria = useMemo(() => {
     const startTimestamp = startDate ? new Date(startDate).getTime() : 0;
@@ -83,9 +92,9 @@ function App() {
   }, [filteredEvents.length, currentPage, itemsPerPage]);
 
   // Reset to page 1 when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [startDate, endDate, selectedEventTypes, selectedSources, itemsPerPage]);
+  // useEffect(() => {
+  //   setCurrentPage(1);
+  // }, [startDate, endDate, selectedEventTypes, selectedSources, itemsPerPage]);
 
   // Filter handlers
   const toggleEventType = (type: EventType) => {
@@ -131,8 +140,8 @@ function App() {
 
       <main className="app-main">
         <FilterControls
-          startDate={startDate}
-          endDate={endDate}
+          startDate={effectiveStartDate}
+          endDate={effectiveEndDate}
           selectedEventTypes={selectedEventTypes}
           selectedSources={selectedSources}
           aggregationType={aggregationType}

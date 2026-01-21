@@ -4,7 +4,7 @@ import {
     generateTelemetryData,
     getUniqueSources,
     getTimeRange,
-    getEventTypes
+    getEventTypes,
 } from '../utils/dataGenerator';
 
 interface UseTelemetryDataReturn {
@@ -16,23 +16,15 @@ interface UseTelemetryDataReturn {
     totalEvents: number;
 }
 
-/**
- * Custom hook to generate and manage telemetry data
- * Generates data once on mount and provides metadata
- * 
- * @param eventCount - Number of events to generate
- * @returns Telemetry data and metadata
- */
-export function useTelemetryData(eventCount: number = 50000): UseTelemetryDataReturn {
+export function useTelemetryData(
+    eventCount: number = 50000
+): UseTelemetryDataReturn {
     const [events, setEvents] = useState<TelemetryEvent[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    // Generate data on mount
-    useEffect(() => {
-        console.log('Initializing telemetry data...');
-        setIsLoading(true);
+    const [now] = useState(() => Date.now());
 
-        // Use setTimeout to avoid blocking initial render
+    useEffect(() => {
         const timer = setTimeout(() => {
             const generatedEvents = generateTelemetryData(eventCount);
             setEvents(generatedEvents);
@@ -42,14 +34,18 @@ export function useTelemetryData(eventCount: number = 50000): UseTelemetryDataRe
         return () => clearTimeout(timer);
     }, [eventCount]);
 
-    // Memoize expensive computations
     const sources = useMemo(() => {
         return isLoading ? [] : getUniqueSources(events);
     }, [events, isLoading]);
 
-    const timeRange = useMemo(() => {
-        return isLoading ? { min: Date.now(), max: Date.now() } : getTimeRange(events);
-    }, [events, isLoading]);
+    const loadingTimeRange = useMemo(
+        () => ({ min: now, max: now }),
+        [now]
+    );
+
+    const timeRange = isLoading
+        ? loadingTimeRange
+        : getTimeRange(events);
 
     const eventTypes: EventType[] = useMemo(() => {
         return getEventTypes();
