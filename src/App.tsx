@@ -121,21 +121,76 @@ const effectiveEndDate = endDate ?? defaultEndDate;
   };
 
   // Loading state
-  if (isLoading) {
+ if (isLoading) {
     return (
-      <div className="loading-container">
-        <h1>Telemetry Vault</h1>
-        <p>Generating synthetic telemetry data...</p>
-        <div className="spinner" role="status" aria-label="Loading" />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#F9FAFB' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ position: 'relative', width: 64, height: 64, margin: '0 auto 24px' }}>
+            {[...Array(12)].map((_, i) => (
+              <div
+                key={i}
+                style={{
+                  position: 'absolute',
+                  width: 6,
+                  height: 18,
+                  background: '#1764FF',
+                  borderRadius: 3,
+                  left: '50%',
+                  top: '50%',
+                  transformOrigin: '3px 32px',
+                  transform: `translate(-50%, -50%) rotate(${i * 30}deg)`,
+                  opacity: 0.1 + (i / 12) * 0.9,
+                  animation: `pulse-loader 1.2s ease-in-out ${i * 0.1}s infinite`
+                }}
+              />
+            ))}
+          </div>
+          <p style={{ color: '#6B7280', fontSize: 16, fontWeight: 500, animation: 'fade-in 0.5s ease-in' }}>Generating 100,000 telemetry events...</p>
+        </div>
+        <style>{`
+          @keyframes pulse-loader {
+            0%, 100% { opacity: 0.1; }
+            50% { opacity: 1; }
+          }
+          @keyframes fade-in {
+            from { opacity: 0; }
+            to { opacity: 1; }
+          }
+        `}</style>
       </div>
     );
   }
 
   return (
-    <div className="app">
-      <header className="app-header">
-        <h1>Telemetry Vault</h1>
-        <p className="subtitle">Data Exploration Interface</p>
+    <div
+      style={{
+        minHeight: '100vh',
+        background: '#F9FAFB',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+      }}
+    >
+      <header style={{
+        background: 'linear-gradient(135deg, #1764FF 0%, #0EA5E9 100%)',
+        padding: '28px 32px',
+        boxShadow: '0 4px 6px rgba(0,0,0,0.07)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <svg style={{ width: 32, height: 32, color: 'white' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
+          <div>
+            <h1
+              style={{
+                fontSize: 28, fontWeight: 700, color: 'white', margin: 0, letterSpacing: '-0.5px'
+              }}>
+              Telemetry Vault
+            </h1>
+            <p
+              style={{ fontSize: 14, color: 'rgba(255,255,255,0.9)', margin: '4px 0 0' }}>
+              Real-time Data Exploration Interface
+            </p>
+          </div>
+        </div>
       </header>
 
       <main className="app-main">
