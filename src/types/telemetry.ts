@@ -9,6 +9,7 @@ export interface TelemetryEvent {
     source: string; // Service/source name
 }
 
+
 /**
  * Available event types
  */

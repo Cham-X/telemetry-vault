@@ -1,34 +1,31 @@
-import type { EventType } from '../types/telemetry';
-
-interface BadgeProps {
-  type: EventType;
-}
-
-const BADGE_COLORS: Record<EventType, { bg: string; text: string }> = {
-  request: { bg: '#d1ecf1', text: '#0c5460' },
-  error: { bg: '#f8d7da', text: '#721c24' },
-  warning: { bg: '#fff3cd', text: '#856404' },
-  metric: { bg: '#d4edda', text: '#155724' },
-  trace: { bg: '#e2e3e5', text: '#383d41' },
-};
-
-/**
- * Badge component for displaying event types with color coding
- */
-export function Badge({ type }: BadgeProps) {
-  const colors = BADGE_COLORS[type];
-
+const Badge = ({ type }: { type: string }) => {
+  const badges: { [key: string]: { bg: string; text: string; icon: string } } = {
+    click: { bg: '#DDD6FE', text: '#4338CA', icon: '🖱️' },
+    view: { bg: '#DBEAFE', text: '#0369A1', icon: '👁️' },
+    submit: { bg: '#D1FAE5', text: '#065F46', icon: '✓' },
+    error: { bg: '#FEE2E2', text: '#7F1D1D', icon: '⚠️' },
+    load: { bg: '#FEF3C7', text: '#78350F', icon: '⚡' },
+  };
+  const badge = badges[type] || badges.click;
   return (
     <span
-      className="badge"
       style={{
-        backgroundColor: colors.bg,
-        color: colors.text,
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '6px',
+        padding: '6px 12px',
+        backgroundColor: badge.bg,
+        color: badge.text,
+        borderRadius: '6px',
+        fontSize: '12px',
+        fontWeight: '600',
+        textTransform: 'capitalize',
       }}
-      role="status"
-      aria-label={`Event type: ${type}`}
     >
+      <span>{badge.icon}</span>
       {type}
     </span>
   );
-}
+};
+
+export default Badge;

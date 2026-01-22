@@ -1,8 +1,8 @@
 import type { TelemetryEvent, EventType } from '../types/telemetry';
 
-const EVENT_TYPES: EventType[] = ['request', 'error', 'warning', 'metric', 'trace'];
+export const EVENT_TYPES: EventType[] = ['request', 'error', 'warning', 'metric', 'trace'];
 
-const SOURCES = [
+export const SOURCES = [
     'api-gateway',
     'auth-service',
     'payment-service',
@@ -16,6 +16,28 @@ const SOURCES = [
     'cdn-edge',
     'logging-service',
 ];
+
+// const EVENT_TYPES = ['click', 'view', 'submit', 'error', 'load'];
+// const SOURCES = ['Web', 'Mobile', 'API', 'Desktop', 'Server', 'CLI'];
+
+export const COLORS = {
+    primary: '#6366F1',
+    primaryDark: '#4F46E5',
+    secondary: '#8B5CF6',
+    accent: '#EC4899',
+    accentLight: '#F472B6',
+    success: '#10B981',
+    warning: '#F59E0B',
+    error: '#EF4444',
+    background: '#F8FAFC',
+    surface: '#FFFFFF',
+    surfaceAlt: '#F1F5F9',
+    border: '#E2E8F0',
+    borderLight: '#F1F5F9',
+    text: '#1E293B',
+    textLight: '#64748B',
+    textLighter: '#94A3B8',
+};
 
 /**
  * Generates a realistic distribution of values based on event type
