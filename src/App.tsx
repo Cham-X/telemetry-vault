@@ -479,7 +479,7 @@ export default function App() {
                 style={{
                   position: "relative",
                   flex: "1 1 220px",
-                  minWidth: 220,
+                  minWidth: 120,
                 }}
               >
                 <div
