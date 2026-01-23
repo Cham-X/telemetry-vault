@@ -43,7 +43,7 @@ export default function App() {
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
   // Filter loading state
-  const [isFilteringLoading, setIsFilteringLoading] = useState(false);
+  const [isFilteringLoading] = useState(false);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
