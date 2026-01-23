@@ -69,10 +69,7 @@ The Telemetry Dashboard provides a complete solution for viewing, filtering, and
 ### Installation
 
 ```bash
-# Using the shadcn CLI
-npx shadcn-cli@latest init
-
-# Or clone and install dependencies
+# clone and install dependencies
 npm install
 ```
 
