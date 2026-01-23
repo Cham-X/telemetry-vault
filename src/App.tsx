@@ -1,33 +1,47 @@
-import { useState, useMemo, useEffect } from 'react';
-import { generateTelemetryData, COLORS, EVENT_TYPES, SOURCES } from './utils/dataGenerator';
-import type { TelemetryEvent, EventType } from './types/telemetry';
-import { IconChart, IconCalendar, IconFilter, IconServer, IconSearch, IconX, IconLoader, IconBarChart, IconChevronDown } from './assets/icons/index';
-import Badge from './component/Badge';
-import EmptyState from './component/EmptyState';
-import { formatDate } from './component/DareFormatter';
-import { DataTable } from './component/DataTable';
+import { useState, useMemo, useEffect } from "react";
+import {
+  generateTelemetryData,
+  COLORS,
+  EVENT_TYPES,
+  SOURCES,
+} from "./utils/dataGenerator";
+import type { TelemetryEvent, EventType } from "./types/telemetry";
+import {
+  IconChart,
+  IconCalendar,
+  IconFilter,
+  IconServer,
+  IconSearch,
+  IconX,
+  IconBarChart,
+  IconChevronDown,
+} from "./assets/icons/index";
+import { DataTable } from "./component/DataTable";
+import { Pagination } from "./component/Pagination";
 
 export default function App() {
   const [events, setEvents] = useState<TelemetryEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   // Filter states
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [selectedEventTypes, setSelectedEventTypes] = useState<EventType[]>([]);
   const [selectedSources, setSelectedSources] = useState<string[]>([]);
-  const [aggregationType, setAggregationType] = useState<'count' | 'average' | 'p95'>('count');
-  const [searchQuery, setSearchQuery] = useState('');
-  
+  const [aggregationType, setAggregationType] = useState<
+    "count" | "average" | "p95"
+  >("count");
+  const [searchQuery, setSearchQuery] = useState("");
+
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
-  
+
   // Dropdown states
   const [isEventTypeOpen, setIsEventTypeOpen] = useState(false);
   const [isSourceOpen, setIsSourceOpen] = useState(false);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
-  
+
   // Filter loading state
   const [isFilteringLoading, setIsFilteringLoading] = useState(false);
 
@@ -35,14 +49,14 @@ export default function App() {
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      if (!target.closest('[data-dropdown-trigger]')) {
+      if (!target.closest("[data-dropdown-trigger]")) {
         setIsEventTypeOpen(false);
         setIsSourceOpen(false);
         setIsDatePickerOpen(false);
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   useEffect(() => {
@@ -51,26 +65,32 @@ export default function App() {
       setEvents(generatedEvents);
       if (generatedEvents.length > 0) {
         const minDate = new Date(generatedEvents[0].timestamp);
-        const maxDate = new Date(generatedEvents[generatedEvents.length - 1].timestamp);
-        setStartDate(minDate.toISOString().split('T')[0]);
-        setEndDate(maxDate.toISOString().split('T')[0]);
+        const maxDate = new Date(
+          generatedEvents[generatedEvents.length - 1].timestamp,
+        );
+        setStartDate(minDate.toISOString().split("T")[0]);
+        setEndDate(maxDate.toISOString().split("T")[0]);
       }
       setIsLoading(false);
     }, 800);
   }, []);
 
-
-
-
   const { filteredEvents, aggregatedValue } = useMemo(() => {
     const startTimestamp = startDate ? new Date(startDate).getTime() : 0;
-    const endTimestamp = endDate ? new Date(endDate).getTime() + 86400000 : Infinity;
-    
-    let filtered = events.filter(event => {
-      const matchesTime = event.timestamp >= startTimestamp && event.timestamp <= endTimestamp;
-      const matchesType = selectedEventTypes.length === 0 || selectedEventTypes.includes(event.eventType);
-      const matchesSource = selectedSources.length === 0 || selectedSources.includes(event.source);
-      const matchesSearch = !searchQuery || 
+    const endTimestamp = endDate
+      ? new Date(endDate).getTime() + 86400000
+      : Infinity;
+
+    let filtered = events.filter((event) => {
+      const matchesTime =
+        event.timestamp >= startTimestamp && event.timestamp <= endTimestamp;
+      const matchesType =
+        selectedEventTypes.length === 0 ||
+        selectedEventTypes.includes(event.eventType);
+      const matchesSource =
+        selectedSources.length === 0 || selectedSources.includes(event.source);
+      const matchesSearch =
+        !searchQuery ||
         event.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
         event.source.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesTime && matchesType && matchesSource && matchesSearch;
@@ -78,11 +98,12 @@ export default function App() {
 
     let aggValue = 0;
     if (filtered.length > 0) {
-      if (aggregationType === 'count') {
+      if (aggregationType === "count") {
         aggValue = filtered.length;
-      } else if (aggregationType === 'average') {
-        aggValue = filtered.reduce((sum, e) => sum + e.value, 0) / filtered.length;
-      } else if (aggregationType === 'p95') {
+      } else if (aggregationType === "average") {
+        aggValue =
+          filtered.reduce((sum, e) => sum + e.value, 0) / filtered.length;
+      } else if (aggregationType === "p95") {
         const sorted = [...filtered].sort((a, b) => a.value - b.value);
         const index = Math.floor(sorted.length * 0.95);
         aggValue = sorted[index]?.value || 0;
@@ -90,7 +111,15 @@ export default function App() {
     }
 
     return { filteredEvents: filtered, aggregatedValue: aggValue };
-  }, [events, startDate, endDate, selectedEventTypes, selectedSources, aggregationType, searchQuery]);
+  }, [
+    events,
+    startDate,
+    endDate,
+    selectedEventTypes,
+    selectedSources,
+    aggregationType,
+    searchQuery,
+  ]);
 
   const paginatedEvents = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
@@ -101,61 +130,53 @@ export default function App() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [startDate, endDate, selectedEventTypes, selectedSources, pageSize, searchQuery]);
+  }, [
+    startDate,
+    endDate,
+    selectedEventTypes,
+    selectedSources,
+    pageSize,
+    searchQuery,
+  ]);
 
   const toggleEventType = (type: EventType) => {
-    setSelectedEventTypes(prev => 
-      prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
+    setSelectedEventTypes((prev) =>
+      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type],
     );
   };
 
   const toggleSource = (source: string) => {
-    setSelectedSources(prev =>
-      prev.includes(source) ? prev.filter(s => s !== source) : [...prev, source]
+    setSelectedSources((prev) =>
+      prev.includes(source)
+        ? prev.filter((s) => s !== source)
+        : [...prev, source],
     );
   };
 
   const clearFilters = () => {
     setSelectedEventTypes([]);
     setSelectedSources([]);
-    setSearchQuery('');
+    setSearchQuery("");
     if (events.length > 0) {
       const minDate = new Date(events[0].timestamp);
       const maxDate = new Date(events[events.length - 1].timestamp);
-      setStartDate(minDate.toISOString().split('T')[0]);
-      setEndDate(maxDate.toISOString().split('T')[0]);
+      setStartDate(minDate.toISOString().split("T")[0]);
+      setEndDate(maxDate.toISOString().split("T")[0]);
     }
-  };
-
-  const generatePageNumbers = () => {
-    const pages = [];
-    const maxVisible = 7;
-    if (totalPages <= maxVisible) {
-      for (let i = 1; i <= totalPages; i++) pages.push(i);
-    } else {
-      if (currentPage <= 4) {
-        for (let i = 1; i <= 5; i++) pages.push(i);
-        pages.push('...');
-        pages.push(totalPages);
-      } else if (currentPage >= totalPages - 3) {
-        pages.push(1);
-        pages.push('...');
-        for (let i = totalPages - 4; i <= totalPages; i++) pages.push(i);
-      } else {
-        pages.push(1);
-        pages.push('...');
-        for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
-        pages.push('...');
-        pages.push(totalPages);
-      }
-    }
-    return pages;
   };
 
   // Loading state
   if (isLoading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: COLORS.background }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: "100vh",
+          background: COLORS.background,
+        }}
+      >
         <style>{`
           @keyframes spin {
             from { transform: rotate(0deg); }
@@ -166,29 +187,41 @@ export default function App() {
             50% { opacity: 1; }
           }
         `}</style>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{
-            width: 60,
-            height: 60,
-            margin: '0 auto 24px',
-            background: `linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.secondary} 100%)`,
-            borderRadius: '12px',
-            animation: 'spin 3s linear infinite',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'white',
-          }}>
+        <div style={{ textAlign: "center" }}>
+          <div
+            style={{
+              width: 60,
+              height: 60,
+              margin: "0 auto 24px",
+              background: `linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.secondary} 100%)`,
+              borderRadius: "12px",
+              animation: "spin 3s linear infinite",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "white",
+            }}
+          >
             <IconBarChart />
           </div>
-          <p style={{ color: COLORS.textLight, fontSize: 16, fontWeight: 500, margin: 0, animation: 'bounce 1.5s ease-in-out infinite' }}>Loading telemetry data...</p>
+          <p
+            style={{
+              color: COLORS.textLight,
+              fontSize: 16,
+              fontWeight: 500,
+              margin: 0,
+              animation: "bounce 1.5s ease-in-out infinite",
+            }}
+          >
+            Loading telemetry data...
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: COLORS.background }}>
+    <div style={{ minHeight: "100vh", background: COLORS.background }}>
       <style>{`
         @keyframes slideUp {
           from {
@@ -220,73 +253,102 @@ export default function App() {
       `}</style>
 
       {/* Header */}
-      <header style={{
-        background: `linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.secondary} 100%)`,
-        padding: '32px 32px',
-        boxShadow: '0 10px 30px rgba(99, 102, 241, 0.15)',
-        position: 'sticky',
-        top: 0,
-        zIndex: 100,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, maxWidth: '1400px', margin: '0 auto' }}>
-          <div style={{
-            width: 40,
-            height: 40,
-            borderRadius: '10px',
-            background: 'rgba(255, 255, 255, 0.2)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'white',
-          }}>
+      <header
+        style={{
+          background: `linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.secondary} 100%)`,
+          padding: "32px 32px",
+          boxShadow: "0 10px 30px rgba(99, 102, 241, 0.15)",
+          position: "sticky",
+          top: 0,
+          zIndex: 100,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 16,
+            maxWidth: "1400px",
+            margin: "0 auto",
+          }}
+        >
+          <div
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: "10px",
+              background: "rgba(255, 255, 255, 0.2)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "white",
+            }}
+          >
             <IconBarChart />
           </div>
           <div>
-            <h1 style={{
-              fontSize: 28,
-              fontWeight: 700,
-              color: 'white',
-              margin: 0,
-              letterSpacing: '-0.5px',
-            }}>
+            <h1
+              style={{
+                fontSize: 28,
+                fontWeight: 700,
+                color: "white",
+                margin: 0,
+                letterSpacing: "-0.5px",
+              }}
+            >
               Telemetry Vault
             </h1>
-            <p style={{
-              fontSize: 13,
-              color: 'rgba(255, 255, 255, 0.85)',
-              margin: '6px 0 0',
-            }}>
+            <p
+              style={{
+                fontSize: 13,
+                color: "rgba(255, 255, 255, 0.85)",
+                margin: "6px 0 0",
+              }}
+            >
               Real-time Data Explorer & Analytics
             </p>
           </div>
         </div>
       </header>
 
-      <main style={{ maxWidth: '1400px', margin: '0 auto', padding: '32px 32px' }}>
+      <main
+        style={{ maxWidth: "1400px", margin: "0 auto", padding: "32px 32px" }}
+      >
         {/* Aggregation Card */}
-        <div style={{
-          background: COLORS.surface,
-          borderRadius: '12px',
-          padding: '24px',
-          marginBottom: '24px',
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
-          border: `1px solid ${COLORS.border}`,
-          animation: 'slideUp 0.4s ease-out',
-        }}>
-          <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+        <div
+          style={{
+            background: COLORS.surface,
+            borderRadius: "12px",
+            padding: "24px",
+            marginBottom: "24px",
+            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.08)",
+            border: `1px solid ${COLORS.border}`,
+            animation: "slideUp 0.4s ease-out",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              gap: 24,
+              flexWrap: "wrap",
+              alignItems: "flex-end",
+            }}
+          >
             {/* Aggregation Type Selector */}
-            <div style={{ flex: '1 1 240px', minWidth: 240 }}>
-              <label style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                fontSize: 13,
-                fontWeight: 600,
-                color: COLORS.textLight,
-                marginBottom: 10,
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px',
-              }}>
+            <div style={{ flex: "1 1 240px", minWidth: 240 }}>
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: COLORS.textLight,
+                  marginBottom: 10,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.5px",
+                }}
+              >
                 <span style={{ color: COLORS.primary }}>
                   <IconChart />
                 </span>
@@ -296,15 +358,15 @@ export default function App() {
                 value={aggregationType}
                 onChange={(e) => setAggregationType(e.target.value as any)}
                 style={{
-                  width: '100%',
-                  padding: '12px 14px',
+                  width: "100%",
+                  padding: "12px 14px",
                   border: `2px solid ${COLORS.border}`,
-                  borderRadius: '8px',
+                  borderRadius: "8px",
                   fontSize: 14,
                   background: COLORS.surface,
                   color: COLORS.text,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
                   fontWeight: 500,
                 }}
                 onFocus={(e) => {
@@ -313,7 +375,7 @@ export default function App() {
                 }}
                 onBlur={(e) => {
                   e.currentTarget.style.borderColor = COLORS.border;
-                  e.currentTarget.style.boxShadow = 'none';
+                  e.currentTarget.style.boxShadow = "none";
                 }}
               >
                 <option value="count">Count (Total Events)</option>
@@ -323,78 +385,112 @@ export default function App() {
             </div>
 
             {/* Result Card */}
-            <div style={{
-              flex: '1 1 240px',
-              minWidth: 240,
-              background: `linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)`,
-              borderRadius: '10px',
-              padding: '20px',
-              border: `2px solid ${COLORS.primary}`,
-              animation: 'scaleIn 0.5s ease-out 0.1s backwards',
-            }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: 12,
-              }}>
-                <span style={{
-                  fontSize: 12,
-                  fontWeight: 700,
-                  color: COLORS.primary,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
-                }}>
+            <div
+              style={{
+                flex: "1 1 240px",
+                minWidth: 240,
+                background: `linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)`,
+                borderRadius: "10px",
+                padding: "20px",
+                border: `2px solid ${COLORS.primary}`,
+                animation: "scaleIn 0.5s ease-out 0.1s backwards",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  marginBottom: 12,
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: COLORS.primary,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.5px",
+                  }}
+                >
                   {aggregationType}
                 </span>
                 <span style={{ color: COLORS.primary }}>
                   <IconChart />
                 </span>
               </div>
-              <div style={{
-                fontSize: 36,
-                fontWeight: 700,
-                color: COLORS.text,
-                letterSpacing: '-1px',
-              }}>
-                {aggregatedValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+              <div
+                style={{
+                  fontSize: 36,
+                  fontWeight: 700,
+                  color: COLORS.text,
+                  letterSpacing: "-1px",
+                }}
+              >
+                {aggregatedValue.toLocaleString(undefined, {
+                  maximumFractionDigits: 2,
+                })}
               </div>
-              <div style={{
-                fontSize: 12,
-                color: COLORS.textLight,
-                marginTop: '8px',
-              }}>
-                {selectedEventTypes.length > 0 || selectedSources.length > 0 ? 'Filtered' : 'All'} events
+              <div
+                style={{
+                  fontSize: 12,
+                  color: COLORS.textLight,
+                  marginTop: "8px",
+                }}
+              >
+                {selectedEventTypes.length > 0 || selectedSources.length > 0
+                  ? "Filtered"
+                  : "All"}{" "}
+                events
               </div>
             </div>
           </div>
         </div>
 
         {/* Filters Card */}
-        <div style={{
-          background: COLORS.surface,
-          borderRadius: '12px',
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
-          border: `1px solid ${COLORS.border}`,
-          overflow: 'hidden',
-          animation: 'slideUp 0.5s ease-out 0.05s backwards',
-        }}>
+        <div
+          style={{
+            background: COLORS.surface,
+            borderRadius: "12px",
+            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.08)",
+            border: `1px solid ${COLORS.border}`,
+            overflow: "hidden",
+            animation: "slideUp 0.5s ease-out 0.05s backwards",
+          }}
+        >
           {/* Filters Bar */}
-          <div style={{
-            padding: '20px 24px',
-            borderBottom: `1px solid ${COLORS.border}`,
-            background: COLORS.surfaceAlt,
-          }}>
-            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+          <div
+            style={{
+              padding: "20px 24px",
+              borderBottom: `1px solid ${COLORS.border}`,
+              background: COLORS.surfaceAlt,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                gap: 12,
+                flexWrap: "wrap",
+                alignItems: "center",
+              }}
+            >
               {/* Search */}
-              <div style={{ position: 'relative', flex: '1 1 220px', minWidth: 220 }}>
-                <div style={{
-                  position: 'absolute',
-                  left: 14,
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: COLORS.textLighter,
-                }}>
+              <div
+                style={{
+                  position: "relative",
+                  flex: "1 1 220px",
+                  minWidth: 220,
+                }}
+              >
+                <div
+                  style={{
+                    position: "absolute",
+                    left: 14,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    color: COLORS.textLighter,
+                  }}
+                >
                   <IconSearch />
                 </div>
                 <input
@@ -403,14 +499,14 @@ export default function App() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   style={{
-                    width: '100%',
-                    padding: '11px 14px 11px 42px',
+                    width: "100%",
+                    padding: "11px 14px 11px 42px",
                     border: `1.5px solid ${COLORS.border}`,
-                    borderRadius: '8px',
+                    borderRadius: "8px",
                     fontSize: 14,
                     background: COLORS.surface,
                     color: COLORS.text,
-                    transition: 'all 0.2s ease',
+                    transition: "all 0.2s ease",
                   }}
                   onFocus={(e) => {
                     e.currentTarget.style.borderColor = COLORS.primary;
@@ -418,30 +514,30 @@ export default function App() {
                   }}
                   onBlur={(e) => {
                     e.currentTarget.style.borderColor = COLORS.border;
-                    e.currentTarget.style.boxShadow = 'none';
+                    e.currentTarget.style.boxShadow = "none";
                   }}
                 />
               </div>
 
               {/* Date Range */}
-              <div style={{ position: 'relative' }} data-dropdown-trigger>
+              <div style={{ position: "relative" }} data-dropdown-trigger>
                 <button
                   data-dropdown-trigger
                   onClick={() => setIsDatePickerOpen(!isDatePickerOpen)}
                   style={{
-                    padding: '11px 16px',
+                    padding: "11px 16px",
                     border: `1.5px solid ${COLORS.border}`,
-                    borderRadius: '8px',
+                    borderRadius: "8px",
                     background: COLORS.surface,
                     color: COLORS.text,
-                    cursor: 'pointer',
+                    cursor: "pointer",
                     fontSize: 14,
                     fontWeight: 500,
-                    display: 'flex',
-                    alignItems: 'center',
+                    display: "flex",
+                    alignItems: "center",
                     gap: 8,
-                    transition: 'all 0.2s ease',
-                    whiteSpace: 'nowrap',
+                    transition: "all 0.2s ease",
+                    whiteSpace: "nowrap",
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.borderColor = COLORS.primary;
@@ -453,7 +549,11 @@ export default function App() {
                   }}
                 >
                   <IconCalendar />
-                  <span>{startDate && endDate ? `${startDate} - ${endDate}` : 'Select dates'}</span>
+                  <span>
+                    {startDate && endDate
+                      ? `${startDate} - ${endDate}`
+                      : "Select dates"}
+                  </span>
                   <span style={{ color: COLORS.textLight }}>
                     <IconChevronDown />
                   </span>
@@ -461,47 +561,75 @@ export default function App() {
 
                 {/* Date Picker Dropdown */}
                 {isDatePickerOpen && (
-                  <div style={{
-                    position: 'absolute',
-                    top: '100%',
-                    left: 0,
-                    marginTop: 8,
-                    background: COLORS.surface,
-                    borderRadius: '8px',
-                    border: `1px solid ${COLORS.border}`,
-                    boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
-                    padding: 16,
-                    zIndex: 1000,
-                    minWidth: 300,
-                    animation: 'slideUp 0.2s ease-out',
-                  }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "100%",
+                      left: 0,
+                      marginTop: 8,
+                      background: COLORS.surface,
+                      borderRadius: "8px",
+                      border: `1px solid ${COLORS.border}`,
+                      boxShadow: "0 10px 25px rgba(0, 0, 0, 0.1)",
+                      padding: 16,
+                      zIndex: 1000,
+                      minWidth: 300,
+                      animation: "slideUp 0.2s ease-out",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 12,
+                      }}
+                    >
                       <div>
-                        <label style={{ fontSize: 12, fontWeight: 600, color: COLORS.textLight, display: 'block', marginBottom: 6 }}>Start Date</label>
+                        <label
+                          style={{
+                            fontSize: 12,
+                            fontWeight: 600,
+                            color: COLORS.textLight,
+                            display: "block",
+                            marginBottom: 6,
+                          }}
+                        >
+                          Start Date
+                        </label>
                         <input
                           type="date"
                           value={startDate}
                           onChange={(e) => setStartDate(e.target.value)}
                           style={{
-                            width: '100%',
-                            padding: '10px 12px',
+                            width: "100%",
+                            padding: "10px 12px",
                             border: `1.5px solid ${COLORS.border}`,
-                            borderRadius: '6px',
+                            borderRadius: "6px",
                             fontSize: 13,
                           }}
                         />
                       </div>
                       <div>
-                        <label style={{ fontSize: 12, fontWeight: 600, color: COLORS.textLight, display: 'block', marginBottom: 6 }}>End Date</label>
+                        <label
+                          style={{
+                            fontSize: 12,
+                            fontWeight: 600,
+                            color: COLORS.textLight,
+                            display: "block",
+                            marginBottom: 6,
+                          }}
+                        >
+                          End Date
+                        </label>
                         <input
                           type="date"
                           value={endDate}
                           onChange={(e) => setEndDate(e.target.value)}
                           style={{
-                            width: '100%',
-                            padding: '10px 12px',
+                            width: "100%",
+                            padding: "10px 12px",
                             border: `1.5px solid ${COLORS.border}`,
-                            borderRadius: '6px',
+                            borderRadius: "6px",
                             fontSize: 13,
                           }}
                         />
@@ -509,23 +637,23 @@ export default function App() {
                       <button
                         onClick={() => setIsDatePickerOpen(false)}
                         style={{
-                          padding: '10px 16px',
+                          padding: "10px 16px",
                           background: COLORS.primary,
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '6px',
+                          color: "white",
+                          border: "none",
+                          borderRadius: "6px",
                           fontSize: 13,
                           fontWeight: 600,
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease',
+                          cursor: "pointer",
+                          transition: "all 0.2s ease",
                         }}
                         onMouseEnter={(e) => {
                           e.currentTarget.style.background = COLORS.primaryDark;
-                          e.currentTarget.style.transform = 'translateY(-2px)';
+                          e.currentTarget.style.transform = "translateY(-2px)";
                         }}
                         onMouseLeave={(e) => {
                           e.currentTarget.style.background = COLORS.primary;
-                          e.currentTarget.style.transform = 'translateY(0)';
+                          e.currentTarget.style.transform = "translateY(0)";
                         }}
                       >
                         Apply Dates
@@ -536,24 +664,24 @@ export default function App() {
               </div>
 
               {/* Event Type Filter */}
-              <div style={{ position: 'relative' }} data-dropdown-trigger>
+              <div style={{ position: "relative" }} data-dropdown-trigger>
                 <button
                   data-dropdown-trigger
                   onClick={() => setIsEventTypeOpen(!isEventTypeOpen)}
                   style={{
-                    padding: '11px 16px',
+                    padding: "11px 16px",
                     border: `1.5px solid ${selectedEventTypes.length > 0 ? COLORS.primary : COLORS.border}`,
-                    borderRadius: '8px',
+                    borderRadius: "8px",
                     background: COLORS.surface,
                     color: COLORS.text,
-                    cursor: 'pointer',
+                    cursor: "pointer",
                     fontSize: 14,
                     fontWeight: 500,
-                    display: 'flex',
-                    alignItems: 'center',
+                    display: "flex",
+                    alignItems: "center",
                     gap: 8,
-                    transition: 'all 0.2s ease',
-                    whiteSpace: 'nowrap',
+                    transition: "all 0.2s ease",
+                    whiteSpace: "nowrap",
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.backgroundColor = `rgba(99, 102, 241, 0.05)`;
@@ -563,37 +691,45 @@ export default function App() {
                   }}
                 >
                   <IconFilter />
-                  <span>Event Types {selectedEventTypes.length > 0 && `(${selectedEventTypes.length})`}</span>
+                  <span>
+                    Event Types{" "}
+                    {selectedEventTypes.length > 0 &&
+                      `(${selectedEventTypes.length})`}
+                  </span>
                 </button>
 
                 {/* Event Type Dropdown */}
                 {isEventTypeOpen && (
-                  <div style={{
-                    position: 'absolute',
-                    top: '100%',
-                    left: 0,
-                    marginTop: 8,
-                    background: COLORS.surface,
-                    borderRadius: '8px',
-                    border: `1px solid ${COLORS.border}`,
-                    boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
-                    padding: 12,
-                    zIndex: 1000,
-                    minWidth: 200,
-                    animation: 'slideUp 0.2s ease-out',
-                  }}>
-                    {EVENT_TYPES.map((type:any) => (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "100%",
+                      left: 0,
+                      marginTop: 8,
+                      background: COLORS.surface,
+                      borderRadius: "8px",
+                      border: `1px solid ${COLORS.border}`,
+                      boxShadow: "0 10px 25px rgba(0, 0, 0, 0.1)",
+                      padding: 12,
+                      zIndex: 1000,
+                      minWidth: 200,
+                      animation: "slideUp 0.2s ease-out",
+                    }}
+                  >
+                    {EVENT_TYPES.map((type: any) => (
                       <label
                         key={type}
                         style={{
-                          display: 'flex',
-                          alignItems: 'center',
+                          display: "flex",
+                          alignItems: "center",
                           gap: 10,
-                          padding: '10px 12px',
-                          cursor: 'pointer',
-                          borderRadius: '6px',
-                          transition: 'background 0.15s ease',
-                          backgroundColor: selectedEventTypes.includes(type) ? `rgba(99, 102, 241, 0.1)` : 'transparent',
+                          padding: "10px 12px",
+                          cursor: "pointer",
+                          borderRadius: "6px",
+                          transition: "background 0.15s ease",
+                          backgroundColor: selectedEventTypes.includes(type)
+                            ? `rgba(99, 102, 241, 0.1)`
+                            : "transparent",
                         }}
                         onMouseEnter={(e) => {
                           if (!selectedEventTypes.includes(type)) {
@@ -601,16 +737,28 @@ export default function App() {
                           }
                         }}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = selectedEventTypes.includes(type) ? `rgba(99, 102, 241, 0.1)` : 'transparent';
+                          e.currentTarget.style.backgroundColor =
+                            selectedEventTypes.includes(type)
+                              ? `rgba(99, 102, 241, 0.1)`
+                              : "transparent";
                         }}
                       >
                         <input
                           type="checkbox"
                           checked={selectedEventTypes.includes(type)}
                           onChange={() => toggleEventType(type)}
-                          style={{ cursor: 'pointer', accentColor: COLORS.primary }}
+                          style={{
+                            cursor: "pointer",
+                            accentColor: COLORS.primary,
+                          }}
                         />
-                        <span style={{ fontSize: 13, fontWeight: 500, color: COLORS.text }}>
+                        <span
+                          style={{
+                            fontSize: 13,
+                            fontWeight: 500,
+                            color: COLORS.text,
+                          }}
+                        >
                           {type.charAt(0).toUpperCase() + type.slice(1)}
                         </span>
                       </label>
@@ -620,24 +768,24 @@ export default function App() {
               </div>
 
               {/* Source Filter */}
-              <div style={{ position: 'relative' }} data-dropdown-trigger>
+              <div style={{ position: "relative" }} data-dropdown-trigger>
                 <button
                   data-dropdown-trigger
                   onClick={() => setIsSourceOpen(!isSourceOpen)}
                   style={{
-                    padding: '11px 16px',
+                    padding: "11px 16px",
                     border: `1.5px solid ${selectedSources.length > 0 ? COLORS.primary : COLORS.border}`,
-                    borderRadius: '8px',
+                    borderRadius: "8px",
                     background: COLORS.surface,
                     color: COLORS.text,
-                    cursor: 'pointer',
+                    cursor: "pointer",
                     fontSize: 14,
                     fontWeight: 500,
-                    display: 'flex',
-                    alignItems: 'center',
+                    display: "flex",
+                    alignItems: "center",
                     gap: 8,
-                    transition: 'all 0.2s ease',
-                    whiteSpace: 'nowrap',
+                    transition: "all 0.2s ease",
+                    whiteSpace: "nowrap",
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.backgroundColor = `rgba(99, 102, 241, 0.05)`;
@@ -647,39 +795,47 @@ export default function App() {
                   }}
                 >
                   <IconServer />
-                  <span>Sources {selectedSources.length > 0 && `(${selectedSources.length})`}</span>
+                  <span>
+                    Sources{" "}
+                    {selectedSources.length > 0 &&
+                      `(${selectedSources.length})`}
+                  </span>
                 </button>
 
                 {/* Source Dropdown */}
                 {isSourceOpen && (
-                  <div style={{
-                    position: 'absolute',
-                    top: '100%',
-                    right: 0,
-                    marginTop: 8,
-                    background: COLORS.surface,
-                    borderRadius: '8px',
-                    border: `1px solid ${COLORS.border}`,
-                    boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
-                    padding: 12,
-                    zIndex: 1000,
-                    minWidth: 220,
-                    maxHeight: '300px',
-                    overflowY: 'auto',
-                    animation: 'slideUp 0.2s ease-out',
-                  }}>
-                    {SOURCES.map((source:any) => (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "100%",
+                      right: 0,
+                      marginTop: 8,
+                      background: COLORS.surface,
+                      borderRadius: "8px",
+                      border: `1px solid ${COLORS.border}`,
+                      boxShadow: "0 10px 25px rgba(0, 0, 0, 0.1)",
+                      padding: 12,
+                      zIndex: 1000,
+                      minWidth: 220,
+                      maxHeight: "300px",
+                      overflowY: "auto",
+                      animation: "slideUp 0.2s ease-out",
+                    }}
+                  >
+                    {SOURCES.map((source: any) => (
                       <label
                         key={source}
                         style={{
-                          display: 'flex',
-                          alignItems: 'center',
+                          display: "flex",
+                          alignItems: "center",
                           gap: 10,
-                          padding: '10px 12px',
-                          cursor: 'pointer',
-                          borderRadius: '6px',
-                          transition: 'background 0.15s ease',
-                          backgroundColor: selectedSources.includes(source) ? `rgba(99, 102, 241, 0.1)` : 'transparent',
+                          padding: "10px 12px",
+                          cursor: "pointer",
+                          borderRadius: "6px",
+                          transition: "background 0.15s ease",
+                          backgroundColor: selectedSources.includes(source)
+                            ? `rgba(99, 102, 241, 0.1)`
+                            : "transparent",
                         }}
                         onMouseEnter={(e) => {
                           if (!selectedSources.includes(source)) {
@@ -687,16 +843,30 @@ export default function App() {
                           }
                         }}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = selectedSources.includes(source) ? `rgba(99, 102, 241, 0.1)` : 'transparent';
+                          e.currentTarget.style.backgroundColor =
+                            selectedSources.includes(source)
+                              ? `rgba(99, 102, 241, 0.1)`
+                              : "transparent";
                         }}
                       >
                         <input
                           type="checkbox"
                           checked={selectedSources.includes(source)}
                           onChange={() => toggleSource(source)}
-                          style={{ cursor: 'pointer', accentColor: COLORS.primary }}
+                          style={{
+                            cursor: "pointer",
+                            accentColor: COLORS.primary,
+                          }}
                         />
-                        <span style={{ fontSize: 13, fontWeight: 500, color: COLORS.text }}>{source}</span>
+                        <span
+                          style={{
+                            fontSize: 13,
+                            fontWeight: 500,
+                            color: COLORS.text,
+                          }}
+                        >
+                          {source}
+                        </span>
                       </label>
                     ))}
                   </div>
@@ -704,22 +874,24 @@ export default function App() {
               </div>
 
               {/* Clear Filters Button */}
-              {(selectedEventTypes.length > 0 || selectedSources.length > 0 || searchQuery) && (
+              {(selectedEventTypes.length > 0 ||
+                selectedSources.length > 0 ||
+                searchQuery) && (
                 <button
                   onClick={clearFilters}
                   style={{
-                    padding: '11px 16px',
-                    background: 'transparent',
+                    padding: "11px 16px",
+                    background: "transparent",
                     border: `1.5px solid ${COLORS.border}`,
-                    borderRadius: '8px',
+                    borderRadius: "8px",
                     color: COLORS.text,
-                    cursor: 'pointer',
+                    cursor: "pointer",
                     fontSize: 14,
                     fontWeight: 500,
-                    display: 'flex',
-                    alignItems: 'center',
+                    display: "flex",
+                    alignItems: "center",
                     gap: 6,
-                    transition: 'all 0.2s ease',
+                    transition: "all 0.2s ease",
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.borderColor = COLORS.error;
@@ -729,7 +901,7 @@ export default function App() {
                   onMouseLeave={(e) => {
                     e.currentTarget.style.borderColor = COLORS.border;
                     e.currentTarget.style.color = COLORS.text;
-                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.backgroundColor = "transparent";
                   }}
                 >
                   <IconX />
@@ -739,7 +911,7 @@ export default function App() {
             </div>
           </div>
 
-          <div style={{ position: 'relative', minHeight: '300px' }}>
+          <div style={{ position: "relative", minHeight: "300px" }}>
             <DataTable
               filteredEvents={filteredEvents}
               isFilteringLoading={isFilteringLoading}
@@ -751,155 +923,14 @@ export default function App() {
           </div>
 
           {/* Pagination */}
-          <div style={{
-            padding: '20px 24px',
-            borderTop: `1px solid ${COLORS.border}`,
-            background: COLORS.surfaceAlt,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: 16,
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-              <div style={{ fontSize: 13, color: COLORS.textLight }}>
-                Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, filteredEvents.length)} of {filteredEvents.length} events
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <label style={{ fontSize: 13, color: COLORS.textLight, fontWeight: 500 }}>Items per page:</label>
-                <select
-                  value={pageSize}
-                  onChange={(e) => {
-                    setPageSize(Number(e.target.value));
-                    setCurrentPage(1);
-                  }}
-                  style={{
-                    padding: '8px 12px',
-                    border: `1.5px solid ${COLORS.border}`,
-                    borderRadius: '6px',
-                    background: COLORS.surface,
-                    color: COLORS.text,
-                    fontSize: 13,
-                    fontWeight: 500,
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = COLORS.primary;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = COLORS.border;
-                  }}
-                >
-                  <option value={10}>10</option>
-                  <option value={25}>25</option>
-                  <option value={50}>50</option>
-                  <option value={100}>100</option>
-                </select>
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <button
-                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
-                style={{
-                  padding: '8px 12px',
-                  border: `1px solid ${COLORS.border}`,
-                  borderRadius: '6px',
-                  background: COLORS.surface,
-                  color: COLORS.text,
-                  cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-                  fontSize: 13,
-                  fontWeight: 500,
-                  transition: 'all 0.2s ease',
-                  opacity: currentPage === 1 ? 0.5 : 1,
-                }}
-                onMouseEnter={(e) => {
-                  if (currentPage > 1) {
-                    e.currentTarget.style.borderColor = COLORS.primary;
-                    e.currentTarget.style.backgroundColor = `rgba(99, 102, 241, 0.05)`;
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = COLORS.border;
-                  e.currentTarget.style.backgroundColor = COLORS.surface;
-                }}
-              >
-                ← Previous
-              </button>
-
-              <div style={{ display: 'flex', gap: 4 }}>
-                {generatePageNumbers().map((page, idx) => (
-                  page === '...' ? (
-                    <span key={`ellipsis-${idx}`} style={{
-                      padding: '8px 12px',
-                      color: COLORS.textLight,
-                      fontSize: 13,
-                    }}>
-                      ...
-                    </span>
-                  ) : (
-                    <button
-                      key={page}
-                      onClick={() => setCurrentPage(page as number)}
-                      style={{
-                        padding: '8px 12px',
-                        border: `1px solid ${currentPage === page ? COLORS.primary : COLORS.border}`,
-                        borderRadius: '6px',
-                        background: currentPage === page ? COLORS.primary : COLORS.surface,
-                        color: currentPage === page ? 'white' : COLORS.text,
-                        cursor: 'pointer',
-                        fontSize: 13,
-                        fontWeight: 500,
-                        transition: 'all 0.2s ease',
-                      }}
-                      onMouseEnter={(e) => {
-                        if (currentPage !== page) {
-                          e.currentTarget.style.borderColor = COLORS.primary;
-                          e.currentTarget.style.backgroundColor = `rgba(99, 102, 241, 0.05)`;
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor = currentPage === page ? COLORS.primary : COLORS.border;
-                        e.currentTarget.style.backgroundColor = currentPage === page ? COLORS.primary : COLORS.surface;
-                      }}
-                    >
-                      {page}
-                    </button>
-                  )
-                ))}
-              </div>
-
-              <button
-                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                disabled={currentPage === totalPages}
-                style={{
-                  padding: '8px 12px',
-                  border: `1px solid ${COLORS.border}`,
-                  borderRadius: '6px',
-                  background: COLORS.surface,
-                  color: COLORS.text,
-                  cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
-                  fontSize: 13,
-                  fontWeight: 500,
-                  transition: 'all 0.2s ease',
-                  opacity: currentPage === totalPages ? 0.5 : 1,
-                }}
-                onMouseEnter={(e) => {
-                  if (currentPage < totalPages) {
-                    e.currentTarget.style.borderColor = COLORS.primary;
-                    e.currentTarget.style.backgroundColor = `rgba(99, 102, 241, 0.05)`;
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = COLORS.border;
-                  e.currentTarget.style.backgroundColor = COLORS.surface;
-                }}
-              >
-                Next →
-              </button>
-            </div>
-          </div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            filteredEvents={filteredEvents}
+            pageSize={pageSize}
+            setPageSize={setPageSize}
+            setCurrentPage={setCurrentPage}
+          />
         </div>
       </main>
     </div>
