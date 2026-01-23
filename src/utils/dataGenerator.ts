@@ -17,8 +17,6 @@ export const SOURCES = [
     'logging-service',
 ];
 
-// const EVENT_TYPES = ['click', 'view', 'submit', 'error', 'load'];
-// const SOURCES = ['Web', 'Mobile', 'API', 'Desktop', 'Server', 'CLI'];
 
 export const COLORS = {
     primary: '#6366F1',

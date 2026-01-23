@@ -1,44 +1,11 @@
 import { useState, useMemo, useEffect } from 'react';
-import {IconBarChart, IconCalendar, IconChart, IconClock, IconFilter, IconSearch, IconServer, IconX,} from '../src/assets/icons/index' 
+import { generateTelemetryData, COLORS, EVENT_TYPES, SOURCES } from './utils/dataGenerator';
+import type { TelemetryEvent, EventType } from './types/telemetry';
+import { IconChart, IconCalendar, IconFilter, IconServer, IconSearch, IconX, IconLoader, IconBarChart, IconChevronDown } from './assets/icons/index';
 import Badge from './component/Badge';
-import { COLORS, EVENT_TYPES, SOURCES } from './utils/dataGenerator';
-import type { TelemetryEvent } from './types/telemetry';
-
-
-
-const generateTelemetryData = (count: number): TelemetryEvent[] => {
-  const events: TelemetryEvent[] = [];
-  const now = Date.now();
-  for (let i = 0; i < count; i++) {
-    events.push({
-      id: `EVT-${String(i + 1).padStart(10, '0')}`,
-      timestamp: now - Math.random() * 30 * 24 * 60 * 60 * 1000,
-      eventType: EVENT_TYPES[Math.floor(Math.random() * EVENT_TYPES.length)],
-      source: SOURCES[Math.floor(Math.random() * SOURCES.length)],
-      value: Math.random() * 1000,
-    });
-  }
-  return events.sort((a, b) => a.timestamp - b.timestamp);
-};
-
-const formatDate = (timestamp: number) => {
-  return new Date(timestamp).toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-};
-
-const formatDateShort = (date: string) => {
-  return new Date(date).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-};
-
+import EmptyState from './component/EmptyState';
+import { formatDate } from './component/DareFormatter';
+import { DataTable } from './component/DataTable';
 
 export default function App() {
   const [events, setEvents] = useState<TelemetryEvent[]>([]);
@@ -47,7 +14,7 @@ export default function App() {
   // Filter states
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>([]);
+  const [selectedEventTypes, setSelectedEventTypes] = useState<EventType[]>([]);
   const [selectedSources, setSelectedSources] = useState<string[]>([]);
   const [aggregationType, setAggregationType] = useState<'count' | 'average' | 'p95'>('count');
   const [searchQuery, setSearchQuery] = useState('');
@@ -60,10 +27,27 @@ export default function App() {
   const [isEventTypeOpen, setIsEventTypeOpen] = useState(false);
   const [isSourceOpen, setIsSourceOpen] = useState(false);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  
+  // Filter loading state
+  const [isFilteringLoading, setIsFilteringLoading] = useState(false);
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('[data-dropdown-trigger]')) {
+        setIsEventTypeOpen(false);
+        setIsSourceOpen(false);
+        setIsDatePickerOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     setTimeout(() => {
-      const generatedEvents = generateTelemetryData(100000);
+      const generatedEvents = generateTelemetryData(10000);
       setEvents(generatedEvents);
       if (generatedEvents.length > 0) {
         const minDate = new Date(generatedEvents[0].timestamp);
@@ -74,6 +58,9 @@ export default function App() {
       setIsLoading(false);
     }, 800);
   }, []);
+
+
+
 
   const { filteredEvents, aggregatedValue } = useMemo(() => {
     const startTimestamp = startDate ? new Date(startDate).getTime() : 0;
@@ -116,7 +103,7 @@ export default function App() {
     setCurrentPage(1);
   }, [startDate, endDate, selectedEventTypes, selectedSources, pageSize, searchQuery]);
 
-  const toggleEventType = (type: string) => {
+  const toggleEventType = (type: EventType) => {
     setSelectedEventTypes(prev => 
       prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
     );
@@ -165,6 +152,7 @@ export default function App() {
     return pages;
   };
 
+  // Loading state
   if (isLoading) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: COLORS.background }}>
@@ -189,6 +177,7 @@ export default function App() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            color: 'white',
           }}>
             <IconBarChart />
           </div>
@@ -435,582 +424,480 @@ export default function App() {
               </div>
 
               {/* Date Range */}
-              <div style={{ position: 'relative' }}>
+              <div style={{ position: 'relative' }} data-dropdown-trigger>
                 <button
+                  data-dropdown-trigger
                   onClick={() => setIsDatePickerOpen(!isDatePickerOpen)}
                   style={{
                     padding: '11px 16px',
                     border: `1.5px solid ${COLORS.border}`,
                     borderRadius: '8px',
                     background: COLORS.surface,
-                    fontSize: 14,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    minWidth: 260,
                     color: COLORS.text,
-                    fontWeight: 500,
-                    transition: 'all 0.2s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = COLORS.primary;
-                    e.currentTarget.style.background = COLORS.surfaceAlt;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = COLORS.border;
-                    e.currentTarget.style.background = COLORS.surface;
-                  }}
-                >
-                  <span style={{ color: COLORS.primary }}>
-                    <IconCalendar />
-                  </span>
-                  <span>
-                    {startDate && endDate ? `${formatDateShort(startDate)} — ${formatDateShort(endDate)}` : 'Select dates'}
-                  </span>
-                </button>
-                {isDatePickerOpen && (
-                  <>
-                    <div
-                      style={{
-                        position: 'fixed',
-                        inset: 0,
-                        zIndex: 40,
-                        animation: 'fadeIn 0.2s ease',
-                      }}
-                      onClick={() => setIsDatePickerOpen(false)}
-                    />
-                    <div style={{
-                      position: 'absolute',
-                      top: 'calc(100% + 8px)',
-                      left: 0,
-                      background: COLORS.surface,
-                      border: `1px solid ${COLORS.border}`,
-                      borderRadius: '10px',
-                      boxShadow: '0 20px 40px rgba(0, 0, 0, 0.12)',
-                      zIndex: 50,
-                      minWidth: 320,
-                      animation: 'slideUp 0.2s ease',
-                      padding: '16px',
-                    }}>
-                      <div style={{
-                        display: 'flex',
-                        gap: 16,
-                        marginBottom: '16px',
-                      }}>
-                        <div>
-                          <label style={{ fontSize: 12, fontWeight: 600, color: COLORS.textLight, textTransform: 'uppercase' }}>From</label>
-                          <input
-                            type="date"
-                            value={startDate}
-                            onChange={(e) => setStartDate(e.target.value)}
-                            style={{
-                              width: '100%',
-                              padding: '10px 12px',
-                              marginTop: '6px',
-                              border: `1.5px solid ${COLORS.border}`,
-                              borderRadius: '6px',
-                              fontSize: 14,
-                              color: COLORS.text,
-                              cursor: 'pointer',
-                            }}
-                          />
-                        </div>
-                        <div>
-                          <label style={{ fontSize: 12, fontWeight: 600, color: COLORS.textLight, textTransform: 'uppercase' }}>To</label>
-                          <input
-                            type="date"
-                            value={endDate}
-                            onChange={(e) => setEndDate(e.target.value)}
-                            style={{
-                              width: '100%',
-                              padding: '10px 12px',
-                              marginTop: '6px',
-                              border: `1.5px solid ${COLORS.border}`,
-                              borderRadius: '6px',
-                              fontSize: 14,
-                              color: COLORS.text,
-                              cursor: 'pointer',
-                            }}
-                          />
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => setIsDatePickerOpen(false)}
-                        style={{
-                          width: '100%',
-                          padding: '11px',
-                          background: `linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.secondary} 100%)`,
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '6px',
-                          fontSize: 14,
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease',
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-                        onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-                      >
-                        Apply Range
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-
-              {/* Event Type Filter */}
-              <div style={{ position: 'relative' }}>
-                <button
-                  onClick={() => setIsEventTypeOpen(!isEventTypeOpen)}
-                  style={{
-                    padding: '11px 16px',
-                    border: `1.5px solid ${COLORS.border}`,
-                    borderRadius: '8px',
-                    background: COLORS.surface,
-                    fontSize: 14,
                     cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    color: COLORS.text,
-                    fontWeight: 500,
-                    transition: 'all 0.2s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = COLORS.primary;
-                    e.currentTarget.style.background = COLORS.surfaceAlt;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = COLORS.border;
-                    e.currentTarget.style.background = COLORS.surface;
-                  }}
-                >
-                  <span style={{ color: COLORS.primary }}>
-                    <IconFilter />
-                  </span>
-                  <span>Event Type {selectedEventTypes.length > 0 && `(${selectedEventTypes.length})`}</span>
-                </button>
-                {isEventTypeOpen && (
-                  <>
-                    <div
-                      style={{
-                        position: 'fixed',
-                        inset: 0,
-                        zIndex: 40,
-                        animation: 'fadeIn 0.2s ease',
-                      }}
-                      onClick={() => setIsEventTypeOpen(false)}
-                    />
-                    <div style={{
-                      position: 'absolute',
-                      top: 'calc(100% + 8px)',
-                      left: 0,
-                      background: COLORS.surface,
-                      border: `1px solid ${COLORS.border}`,
-                      borderRadius: '8px',
-                      boxShadow: '0 20px 40px rgba(0, 0, 0, 0.12)',
-                      padding: '8px',
-                      zIndex: 50,
-                      minWidth: 220,
-                      animation: 'slideUp 0.2s ease',
-                    }}>
-                      {EVENT_TYPES.map(type => (
-                        <label
-                          key={type}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 10,
-                            padding: '10px 12px',
-                            cursor: 'pointer',
-                            borderRadius: '6px',
-                            transition: 'all 0.2s ease',
-                          }}
-                          onMouseEnter={(e) => e.currentTarget.style.background = COLORS.surfaceAlt}
-                          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selectedEventTypes.includes(type)}
-                            onChange={() => toggleEventType(type)}
-                            style={{
-                              width: 18,
-                              height: 18,
-                              cursor: 'pointer',
-                              accentColor: COLORS.primary,
-                            }}
-                          />
-                          <Badge type={type} />
-                        </label>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
-
-              {/* Source Filter */}
-              <div style={{ position: 'relative' }}>
-                <button
-                  onClick={() => setIsSourceOpen(!isSourceOpen)}
-                  style={{
-                    padding: '11px 16px',
-                    border: `1.5px solid ${COLORS.border}`,
-                    borderRadius: '8px',
-                    background: COLORS.surface,
                     fontSize: 14,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    color: COLORS.text,
                     fontWeight: 500,
-                    transition: 'all 0.2s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = COLORS.primary;
-                    e.currentTarget.style.background = COLORS.surfaceAlt;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = COLORS.border;
-                    e.currentTarget.style.background = COLORS.surface;
-                  }}
-                >
-                  <span style={{ color: COLORS.primary }}>
-                    <IconServer />
-                  </span>
-                  <span>Source {selectedSources.length > 0 && `(${selectedSources.length})`}</span>
-                </button>
-                {isSourceOpen && (
-                  <>
-                    <div
-                      style={{
-                        position: 'fixed',
-                        inset: 0,
-                        zIndex: 40,
-                        animation: 'fadeIn 0.2s ease',
-                      }}
-                      onClick={() => setIsSourceOpen(false)}
-                    />
-                    <div style={{
-                      position: 'absolute',
-                      top: 'calc(100% + 8px)',
-                      left: 0,
-                      background: COLORS.surface,
-                      border: `1px solid ${COLORS.border}`,
-                      borderRadius: '8px',
-                      boxShadow: '0 20px 40px rgba(0, 0, 0, 0.12)',
-                      padding: '8px',
-                      zIndex: 50,
-                      minWidth: 240,
-                      maxHeight: 320,
-                      overflowY: 'auto',
-                      animation: 'slideUp 0.2s ease',
-                    }}>
-                      {SOURCES.map(source => (
-                        <label
-                          key={source}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 10,
-                            padding: '10px 12px',
-                            cursor: 'pointer',
-                            borderRadius: '6px',
-                            fontSize: 14,
-                            color: COLORS.text,
-                            transition: 'all 0.2s ease',
-                          }}
-                          onMouseEnter={(e) => e.currentTarget.style.background = COLORS.surfaceAlt}
-                          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selectedSources.includes(source)}
-                            onChange={() => toggleSource(source)}
-                            style={{
-                              width: 18,
-                              height: 18,
-                              cursor: 'pointer',
-                              accentColor: COLORS.primary,
-                            }}
-                          />
-                          <span>{source}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
-
-              {/* Clear Filters */}
-              {(selectedEventTypes.length > 0 || selectedSources.length > 0 || searchQuery) && (
-                <button
-                  onClick={clearFilters}
-                  style={{
-                    padding: '11px 18px',
-                    background: COLORS.error,
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontSize: 14,
-                    fontWeight: 600,
-                    cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     gap: 8,
                     transition: 'all 0.2s ease',
-                    animation: 'fadeIn 0.3s',
+                    whiteSpace: 'nowrap',
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-                  onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = COLORS.primary;
+                    e.currentTarget.style.backgroundColor = `rgba(99, 102, 241, 0.05)`;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = COLORS.border;
+                    e.currentTarget.style.backgroundColor = COLORS.surface;
+                  }}
+                >
+                  <IconCalendar />
+                  <span>{startDate && endDate ? `${startDate} - ${endDate}` : 'Select dates'}</span>
+                  <span style={{ color: COLORS.textLight }}>
+                    <IconChevronDown />
+                  </span>
+                </button>
+
+                {/* Date Picker Dropdown */}
+                {isDatePickerOpen && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    marginTop: 8,
+                    background: COLORS.surface,
+                    borderRadius: '8px',
+                    border: `1px solid ${COLORS.border}`,
+                    boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
+                    padding: 16,
+                    zIndex: 1000,
+                    minWidth: 300,
+                    animation: 'slideUp 0.2s ease-out',
+                  }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      <div>
+                        <label style={{ fontSize: 12, fontWeight: 600, color: COLORS.textLight, display: 'block', marginBottom: 6 }}>Start Date</label>
+                        <input
+                          type="date"
+                          value={startDate}
+                          onChange={(e) => setStartDate(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '10px 12px',
+                            border: `1.5px solid ${COLORS.border}`,
+                            borderRadius: '6px',
+                            fontSize: 13,
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: 12, fontWeight: 600, color: COLORS.textLight, display: 'block', marginBottom: 6 }}>End Date</label>
+                        <input
+                          type="date"
+                          value={endDate}
+                          onChange={(e) => setEndDate(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '10px 12px',
+                            border: `1.5px solid ${COLORS.border}`,
+                            borderRadius: '6px',
+                            fontSize: 13,
+                          }}
+                        />
+                      </div>
+                      <button
+                        onClick={() => setIsDatePickerOpen(false)}
+                        style={{
+                          padding: '10px 16px',
+                          background: COLORS.primary,
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: 13,
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = COLORS.primaryDark;
+                          e.currentTarget.style.transform = 'translateY(-2px)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = COLORS.primary;
+                          e.currentTarget.style.transform = 'translateY(0)';
+                        }}
+                      >
+                        Apply Dates
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Event Type Filter */}
+              <div style={{ position: 'relative' }} data-dropdown-trigger>
+                <button
+                  data-dropdown-trigger
+                  onClick={() => setIsEventTypeOpen(!isEventTypeOpen)}
+                  style={{
+                    padding: '11px 16px',
+                    border: `1.5px solid ${selectedEventTypes.length > 0 ? COLORS.primary : COLORS.border}`,
+                    borderRadius: '8px',
+                    background: COLORS.surface,
+                    color: COLORS.text,
+                    cursor: 'pointer',
+                    fontSize: 14,
+                    fontWeight: 500,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    transition: 'all 0.2s ease',
+                    whiteSpace: 'nowrap',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = `rgba(99, 102, 241, 0.05)`;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = COLORS.surface;
+                  }}
+                >
+                  <IconFilter />
+                  <span>Event Types {selectedEventTypes.length > 0 && `(${selectedEventTypes.length})`}</span>
+                </button>
+
+                {/* Event Type Dropdown */}
+                {isEventTypeOpen && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    marginTop: 8,
+                    background: COLORS.surface,
+                    borderRadius: '8px',
+                    border: `1px solid ${COLORS.border}`,
+                    boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
+                    padding: 12,
+                    zIndex: 1000,
+                    minWidth: 200,
+                    animation: 'slideUp 0.2s ease-out',
+                  }}>
+                    {EVENT_TYPES.map((type:any) => (
+                      <label
+                        key={type}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 10,
+                          padding: '10px 12px',
+                          cursor: 'pointer',
+                          borderRadius: '6px',
+                          transition: 'background 0.15s ease',
+                          backgroundColor: selectedEventTypes.includes(type) ? `rgba(99, 102, 241, 0.1)` : 'transparent',
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!selectedEventTypes.includes(type)) {
+                            e.currentTarget.style.backgroundColor = `rgba(99, 102, 241, 0.05)`;
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = selectedEventTypes.includes(type) ? `rgba(99, 102, 241, 0.1)` : 'transparent';
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedEventTypes.includes(type)}
+                          onChange={() => toggleEventType(type)}
+                          style={{ cursor: 'pointer', accentColor: COLORS.primary }}
+                        />
+                        <span style={{ fontSize: 13, fontWeight: 500, color: COLORS.text }}>
+                          {type.charAt(0).toUpperCase() + type.slice(1)}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Source Filter */}
+              <div style={{ position: 'relative' }} data-dropdown-trigger>
+                <button
+                  data-dropdown-trigger
+                  onClick={() => setIsSourceOpen(!isSourceOpen)}
+                  style={{
+                    padding: '11px 16px',
+                    border: `1.5px solid ${selectedSources.length > 0 ? COLORS.primary : COLORS.border}`,
+                    borderRadius: '8px',
+                    background: COLORS.surface,
+                    color: COLORS.text,
+                    cursor: 'pointer',
+                    fontSize: 14,
+                    fontWeight: 500,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    transition: 'all 0.2s ease',
+                    whiteSpace: 'nowrap',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = `rgba(99, 102, 241, 0.05)`;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = COLORS.surface;
+                  }}
+                >
+                  <IconServer />
+                  <span>Sources {selectedSources.length > 0 && `(${selectedSources.length})`}</span>
+                </button>
+
+                {/* Source Dropdown */}
+                {isSourceOpen && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '100%',
+                    right: 0,
+                    marginTop: 8,
+                    background: COLORS.surface,
+                    borderRadius: '8px',
+                    border: `1px solid ${COLORS.border}`,
+                    boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
+                    padding: 12,
+                    zIndex: 1000,
+                    minWidth: 220,
+                    maxHeight: '300px',
+                    overflowY: 'auto',
+                    animation: 'slideUp 0.2s ease-out',
+                  }}>
+                    {SOURCES.map((source:any) => (
+                      <label
+                        key={source}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 10,
+                          padding: '10px 12px',
+                          cursor: 'pointer',
+                          borderRadius: '6px',
+                          transition: 'background 0.15s ease',
+                          backgroundColor: selectedSources.includes(source) ? `rgba(99, 102, 241, 0.1)` : 'transparent',
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!selectedSources.includes(source)) {
+                            e.currentTarget.style.backgroundColor = `rgba(99, 102, 241, 0.05)`;
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = selectedSources.includes(source) ? `rgba(99, 102, 241, 0.1)` : 'transparent';
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedSources.includes(source)}
+                          onChange={() => toggleSource(source)}
+                          style={{ cursor: 'pointer', accentColor: COLORS.primary }}
+                        />
+                        <span style={{ fontSize: 13, fontWeight: 500, color: COLORS.text }}>{source}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Clear Filters Button */}
+              {(selectedEventTypes.length > 0 || selectedSources.length > 0 || searchQuery) && (
+                <button
+                  onClick={clearFilters}
+                  style={{
+                    padding: '11px 16px',
+                    background: 'transparent',
+                    border: `1.5px solid ${COLORS.border}`,
+                    borderRadius: '8px',
+                    color: COLORS.text,
+                    cursor: 'pointer',
+                    fontSize: 14,
+                    fontWeight: 500,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    transition: 'all 0.2s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = COLORS.error;
+                    e.currentTarget.style.color = COLORS.error;
+                    e.currentTarget.style.backgroundColor = `rgba(239, 68, 68, 0.05)`;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = COLORS.border;
+                    e.currentTarget.style.color = COLORS.text;
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
                 >
                   <IconX />
-                  Clear All
+                  Clear Filters
                 </button>
               )}
             </div>
           </div>
 
-          <div style={{
-            padding: '16px 24px',
-            borderBottom: `1px solid ${COLORS.border}`,
-            background: COLORS.surfaceAlt,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            fontSize: 14,
-            color: COLORS.textLight,
-          }}>
-            <span style={{ color: COLORS.primary }}>
-              <IconClock />
-            </span>
-            <p style={{ margin: 0 }}>
-              Showing <strong style={{ color: COLORS.text, fontWeight: 600 }}>{paginatedEvents.length}</strong> of{' '}
-              <strong style={{ color: COLORS.text, fontWeight: 600 }}>{filteredEvents.length.toLocaleString()}</strong> events
-              {filteredEvents.length !== events.length && (
-                <span> (filtered from {events.length.toLocaleString()} total)</span>
-              )}
-            </p>
-          </div>
-
-          {/* Table */}
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{
-              width: '100%',
-              borderCollapse: 'collapse',
-            }}>
-              <thead style={{ background: COLORS.surfaceAlt }}>
-                <tr>
-                  <th style={{
-                    padding: '16px',
-                    textAlign: 'left',
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: COLORS.text,
-                    borderBottom: `2px solid ${COLORS.border}`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                  }}>
-                    <span style={{ color: COLORS.primary }}>
-                      <IconClock />
-                    </span>
-                    Timestamp
-                  </th>
-                  <th style={{
-                    padding: '16px',
-                    textAlign: 'left',
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: COLORS.text,
-                    borderBottom: `2px solid ${COLORS.border}`,
-                  }}>
-                    Event Type
-                  </th>
-                  <th style={{
-                    padding: '16px',
-                    textAlign: 'left',
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: COLORS.text,
-                    borderBottom: `2px solid ${COLORS.border}`,
-                  }}>
-                    Source
-                  </th>
-                  <th style={{
-                    padding: '16px',
-                    textAlign: 'left',
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: COLORS.text,
-                    borderBottom: `2px solid ${COLORS.border}`,
-                  }}>
-                    Value
-                  </th>
-                  <th style={{
-                    padding: '16px',
-                    textAlign: 'left',
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: COLORS.text,
-                    borderBottom: `2px solid ${COLORS.border}`,
-                  }}>
-                    ID
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedEvents.map((event, idx) => (
-                  <tr
-                    key={event.id}
-                    style={{
-                      borderBottom: `1px solid ${COLORS.border}`,
-                      background: idx % 2 === 0 ? COLORS.surface : COLORS.surfaceAlt,
-                      transition: 'all 0.15s ease',
-                      cursor: 'pointer',
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = `rgba(99, 102, 241, 0.05)`}
-                    onMouseLeave={(e) => e.currentTarget.style.background = idx % 2 === 0 ? COLORS.surface : COLORS.surfaceAlt}
-                  >
-                    <td style={{ padding: '16px', fontSize: 14, color: COLORS.text }}>
-                      {formatDate(event.timestamp)}
-                    </td>
-                    <td style={{ padding: '16px' }}>
-                      <Badge type={event.eventType} />
-                    </td>
-                    <td style={{ padding: '16px', fontSize: 14, color: COLORS.text }}>
-                      {event.source}
-                    </td>
-                    <td style={{
-                      padding: '16px',
-                      fontSize: 14,
-                      color: COLORS.primary,
-                      fontFamily: 'monospace',
-                      fontWeight: 500,
-                    }}>
-                      {event.value}
-                    </td>
-                    <td style={{
-                      padding: '16px',
-                      fontSize: 12,
-                      color: COLORS.textLight,
-                      fontFamily: 'monospace',
-                    }}>
-                      {event.id}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div style={{ position: 'relative', minHeight: '300px' }}>
+            <DataTable
+              filteredEvents={filteredEvents}
+              isFilteringLoading={isFilteringLoading}
+              PaginatedEvents={paginatedEvents}
+              searchQuery={searchQuery}
+              selectedEventTypes={selectedEventTypes}
+              selectedSources={selectedSources}
+            />
           </div>
 
           {/* Pagination */}
           <div style={{
             padding: '20px 24px',
             borderTop: `1px solid ${COLORS.border}`,
+            background: COLORS.surfaceAlt,
             display: 'flex',
-            justifyContent: 'space-between',
             alignItems: 'center',
+            justifyContent: 'space-between',
             flexWrap: 'wrap',
             gap: 16,
-            background: COLORS.surfaceAlt,
           }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              fontSize: 14,
-              fontWeight: 500,
-              color: COLORS.text,
-            }}>
-              <span style={{ color: COLORS.primary }}>
-                <IconBarChart />
-              </span>
-              Page {currentPage} of {totalPages}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+              <div style={{ fontSize: 13, color: COLORS.textLight }}>
+                Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, filteredEvents.length)} of {filteredEvents.length} events
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <label style={{ fontSize: 13, color: COLORS.textLight, fontWeight: 500 }}>Items per page:</label>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  style={{
+                    padding: '8px 12px',
+                    border: `1.5px solid ${COLORS.border}`,
+                    borderRadius: '6px',
+                    background: COLORS.surface,
+                    color: COLORS.text,
+                    fontSize: 13,
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = COLORS.primary;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = COLORS.border;
+                  }}
+                >
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+              </div>
             </div>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <button
+                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                disabled={currentPage === 1}
+                style={{
+                  padding: '8px 12px',
+                  border: `1px solid ${COLORS.border}`,
+                  borderRadius: '6px',
+                  background: COLORS.surface,
+                  color: COLORS.text,
+                  cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                  fontSize: 13,
+                  fontWeight: 500,
+                  transition: 'all 0.2s ease',
+                  opacity: currentPage === 1 ? 0.5 : 1,
+                }}
+                onMouseEnter={(e) => {
+                  if (currentPage > 1) {
+                    e.currentTarget.style.borderColor = COLORS.primary;
+                    e.currentTarget.style.backgroundColor = `rgba(99, 102, 241, 0.05)`;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = COLORS.border;
+                  e.currentTarget.style.backgroundColor = COLORS.surface;
+                }}
+              >
+                ← Previous
+              </button>
 
-            <div style={{ display: 'flex', gap: 6 }}>
-              {generatePageNumbers().map((page, idx) => (
-                <div key={idx}>
-                  {page === '...' ? (
-                    <span style={{
-                      padding: '10px 14px',
+              <div style={{ display: 'flex', gap: 4 }}>
+                {generatePageNumbers().map((page, idx) => (
+                  page === '...' ? (
+                    <span key={`ellipsis-${idx}`} style={{
+                      padding: '8px 12px',
                       color: COLORS.textLight,
-                      fontWeight: 500,
+                      fontSize: 13,
                     }}>
                       ...
                     </span>
                   ) : (
                     <button
+                      key={page}
                       onClick={() => setCurrentPage(page as number)}
-                      disabled={page === currentPage}
                       style={{
-                        padding: '10px 14px',
-                        border: page === currentPage ? `2px solid ${COLORS.primary}` : `1px solid ${COLORS.border}`,
+                        padding: '8px 12px',
+                        border: `1px solid ${currentPage === page ? COLORS.primary : COLORS.border}`,
                         borderRadius: '6px',
-                        background: page === currentPage ? `rgba(99, 102, 241, 0.1)` : COLORS.surface,
-                        color: page === currentPage ? COLORS.primary : COLORS.text,
-                        fontSize: 14,
-                        fontWeight: page === currentPage ? 600 : 500,
-                        cursor: page === currentPage ? 'default' : 'pointer',
-                        minWidth: 44,
+                        background: currentPage === page ? COLORS.primary : COLORS.surface,
+                        color: currentPage === page ? 'white' : COLORS.text,
+                        cursor: 'pointer',
+                        fontSize: 13,
+                        fontWeight: 500,
                         transition: 'all 0.2s ease',
                       }}
                       onMouseEnter={(e) => {
-                        if (page !== currentPage) {
-                          e.currentTarget.style.background = COLORS.surfaceAlt;
-                          e.currentTarget.style.transform = 'translateY(-2px)';
+                        if (currentPage !== page) {
+                          e.currentTarget.style.borderColor = COLORS.primary;
+                          e.currentTarget.style.backgroundColor = `rgba(99, 102, 241, 0.05)`;
                         }
                       }}
                       onMouseLeave={(e) => {
-                        if (page !== currentPage) {
-                          e.currentTarget.style.background = COLORS.surface;
-                          e.currentTarget.style.transform = 'translateY(0)';
-                        }
+                        e.currentTarget.style.borderColor = currentPage === page ? COLORS.primary : COLORS.border;
+                        e.currentTarget.style.backgroundColor = currentPage === page ? COLORS.primary : COLORS.surface;
                       }}
                     >
                       {page}
                     </button>
-                  )}
-                </div>
-              ))}
-            </div>
+                  )
+                ))}
+              </div>
 
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-            }}>
-              <span style={{ fontSize: 14, color: COLORS.textLight, fontWeight: 500 }}>Rows per page:</span>
-              <select
-                value={pageSize}
-                onChange={(e) => setPageSize(Number(e.target.value))}
+              <button
+                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                disabled={currentPage === totalPages}
                 style={{
-                  padding: '10px 14px',
-                  border: `1.5px solid ${COLORS.border}`,
+                  padding: '8px 12px',
+                  border: `1px solid ${COLORS.border}`,
                   borderRadius: '6px',
-                  fontSize: 14,
-                  cursor: 'pointer',
-                  fontWeight: 500,
                   background: COLORS.surface,
                   color: COLORS.text,
+                  cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                  fontSize: 13,
+                  fontWeight: 500,
                   transition: 'all 0.2s ease',
+                  opacity: currentPage === totalPages ? 0.5 : 1,
                 }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = COLORS.primary;
-                  e.currentTarget.style.boxShadow = `0 0 0 3px rgba(99, 102, 241, 0.1)`;
+                onMouseEnter={(e) => {
+                  if (currentPage < totalPages) {
+                    e.currentTarget.style.borderColor = COLORS.primary;
+                    e.currentTarget.style.backgroundColor = `rgba(99, 102, 241, 0.05)`;
+                  }
                 }}
-                onBlur={(e) => {
+                onMouseLeave={(e) => {
                   e.currentTarget.style.borderColor = COLORS.border;
-                  e.currentTarget.style.boxShadow = 'none';
+                  e.currentTarget.style.backgroundColor = COLORS.surface;
                 }}
               >
-                <option value="25">25</option>
-                <option value="50">50</option>
-                <option value="100">100</option>
-                <option value="250">250</option>
-              </select>
+                Next →
+              </button>
             </div>
           </div>
         </div>

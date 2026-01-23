@@ -7,6 +7,8 @@ import IconX from "./IconX";
 import IconCalendar from "./IconCalendar";
 import IconChevronDown from "./IconChevronDown";
 import IconClock from "./IconClock";
+import IconInbox from "./IconInbox";
+import IconLoader from "./IconLoader";
 
 export {
     IconBarChart,
@@ -18,6 +20,8 @@ export {
     IconSearch,
     IconServer,
     IconX,
+    IconInbox,
+    IconLoader,
 }
 
 
